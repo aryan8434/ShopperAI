@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FaRobot, FaTimes, FaPaperPlane } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
-import { getGroqCompletion } from "../services/groqService";
+import { getGroqCompletion } from "../services/GroqService";
 import {
   getAllProducts,
   searchProducts,
