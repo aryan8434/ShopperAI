@@ -26,6 +26,27 @@ const Signup = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const getFriendlyErrorMessage = (errorCode) => {
+    switch (errorCode) {
+      case "auth/invalid-credential":
+        return "Incorrect email or password.";
+      case "auth/user-not-found":
+        return "No account found with this email.";
+      case "auth/wrong-password":
+        return "Incorrect password.";
+      case "auth/email-already-in-use":
+        return "This email already exists.";
+      case "auth/weak-password":
+        return "Password should be at least 6 characters.";
+      case "auth/too-many-requests":
+        return "Too many failed attempts. Please try again later.";
+      case "auth/network-request-failed":
+        return "Network error. Please check your connection.";
+      default:
+        return "An error occurred. Please try again.";
+    }
+  };
+
   const handleSignup = async (e) => {
     e.preventDefault();
     setError("");
@@ -47,8 +68,8 @@ const Signup = () => {
       await signup(email, password, displayName);
       navigate("/");
     } catch (err) {
-      setError(err.message);
       console.error("Signup error:", err);
+      setError(getFriendlyErrorMessage(err.code || err.message));
     } finally {
       setLoading(false);
     }
@@ -105,8 +126,6 @@ const Signup = () => {
         </div>
 
         <form onSubmit={handleSignup} className="auth-form">
-          {error && <div className="error-message">{error}</div>}
-
           <div className="form-group">
             <label htmlFor="displayName">Full Name</label>
             <div className="input-wrapper-auth">
@@ -184,6 +203,8 @@ const Signup = () => {
           <button type="submit" className="auth-btn" disabled={loading}>
             {loading ? "Creating Account..." : "Sign Up"}
           </button>
+          
+          {error && <div className="error-message">{error}</div>}
         </form>
 
         <div className="divider">OR</div>

@@ -123,12 +123,14 @@
 }
 
 .error-message {
-  background-color: #fee;
-  color: #c33;
+  background-color: #ffebee;
+  color: #c62828;
   padding: 12px;
   border-radius: 8px;
   font-size: 0.9rem;
-  border-left: 4px solid #c33;
+  border: 1px solid #ef9a9a;
+  text-align: center;
+  margin-top: 5px;
   animation: shake 0.3s ease;
 }
 
