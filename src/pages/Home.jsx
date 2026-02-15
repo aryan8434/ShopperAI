@@ -32,7 +32,7 @@ const Home = () => {
 
       <div className="hero-section">
         <div className="hero-content">
-          <h1>Welcome to ShopperAI</h1>
+          <h1>Welcome to Shopper</h1>
           <p>Find everything you need at the best prices</p>
         </div>
       </div>

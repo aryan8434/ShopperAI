@@ -29,7 +29,17 @@ const OrderSuccess = () => {
   }
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-IN", {
+    if (!dateString) return "N/A";
+    let date;
+    if (dateString.toDate) {
+      date = dateString.toDate();
+    } else {
+      date = new Date(dateString);
+    }
+    
+    if (isNaN(date.getTime())) return "Invalid Date";
+
+    return date.toLocaleDateString("en-IN", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -53,12 +63,12 @@ const OrderSuccess = () => {
         <div className="order-confirmation">
           <div className="confirmation-row">
             <span>Order Number:</span>
-            <span className="order-number">{order.orderId}</span>
+            <span className="order-number">{order.orderNumber || order.orderId}</span>
           </div>
 
           <div className="confirmation-row">
             <span>Order Date:</span>
-            <span>{formatDate(order.orderDate)}</span>
+            <span>{formatDate(order.createdAt || order.orderDate)}</span>
           </div>
 
           <div className="confirmation-row">
@@ -106,7 +116,7 @@ const OrderSuccess = () => {
               <FaCheckCircle className="timeline-icon" />
               <div className="timeline-content">
                 <h4>Order Confirmed</h4>
-                <p>{formatDate(order.orderDate)}</p>
+                <p>{formatDate(order.createdAt || order.orderDate)}</p>
               </div>
             </div>
 

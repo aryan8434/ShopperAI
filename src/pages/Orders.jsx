@@ -158,7 +158,7 @@ const Orders = () => {
   const performCancellation = async (order, refundDest) => {
       try {
           setLoading(true);
-          await cancelOrder(order.id || order.orderId);
+          await cancelOrder(user.uid, order.id || order.orderId);
 
           let message = "Your order has been cancelled successfully.";
 

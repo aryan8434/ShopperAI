@@ -63,7 +63,8 @@ export const createOrder = async (userId, orderData) => {
       ).toISOString(), // 3 days from now
     };
 
-    const docRef = await addDoc(collection(db, "orders"), order);
+    // Add to users/{userId}/orders
+    const docRef = await addDoc(collection(db, "users", userId, "orders"), order);
     return { id: docRef.id, ...order };
   } catch (error) {
     console.error("Error creating order:", error);
@@ -71,11 +72,11 @@ export const createOrder = async (userId, orderData) => {
   }
 };
 
-// Get user orders
+// Get user orders from subcollection
 export const getUserOrders = async (userId) => {
   try {
-    const q = query(collection(db, "orders"), where("userId", "==", userId));
-    const querySnapshot = await getDocs(q);
+    const ordersRef = collection(db, "users", userId, "orders");
+    const querySnapshot = await getDocs(ordersRef);
     const orders = [];
     querySnapshot.forEach((doc) => {
       orders.push({ id: doc.id, ...doc.data() });
@@ -87,10 +88,10 @@ export const getUserOrders = async (userId) => {
   }
 };
 
-// Get order by ID
-export const getOrderById = async (orderId) => {
+// Get order by ID (Requires userId for subcollection)
+export const getOrderById = async (userId, orderId) => {
   try {
-    const orderRef = doc(db, "orders", orderId);
+    const orderRef = doc(db, "users", userId, "orders", orderId);
     const orderSnap = await getDoc(orderRef);
 
     if (orderSnap.exists()) {
@@ -104,10 +105,9 @@ export const getOrderById = async (orderId) => {
   }
 };
 
-// Update order status
-export const updateOrderStatus = async (orderId, status) => {
+export const updateOrderStatus = async (userId, orderId, status) => {
   try {
-    await updateDoc(doc(db, "orders", orderId), {
+    await updateDoc(doc(db, "users", userId, "orders", orderId), {
       status,
       updatedAt: new Date(),
     });
@@ -117,10 +117,60 @@ export const updateOrderStatus = async (orderId, status) => {
   }
 };
 
-// Cancel order
-export const cancelOrder = async (orderId, refundMethod) => {
+// --- LLM Helper Functions ---
+
+// Get cart for LLM / specific user
+export const getCartForLLM = async (userId) => {
   try {
-    const orderRef = doc(db, "orders", orderId);
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+       return userSnap.data().cart || [];
+    }
+    return [];
+  } catch (error) {
+    console.error("Error fetching cart for LLM:", error);
+    return [];
+  }
+};
+
+// Place order for LLM / programmatically
+export const placeOrderForLLM = async (userId, paymentMethod = "wallet") => {
+    try {
+        const cartItems = await getCartForLLM(userId);
+        if (!cartItems || cartItems.length === 0) {
+            throw new Error("Cart is empty");
+        }
+
+        const totalPrice = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+        const orderData = {
+            items: cartItems,
+            totalPrice,
+            shippingAddress: { address: "Default Address (LLM)", city: "N/A", state: "N/A", zipCode: "000000" }, 
+            paymentMethod: { type: paymentMethod },
+            paymentStatus: "completed"
+        };
+        
+        // Create order
+        const newOrder = await createOrder(userId, orderData);
+
+        // Clear cart
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, { cart: [] });
+
+        return newOrder;
+    } catch (error) {
+        console.error("Error placing order via LLM:", error);
+        throw error;
+    }
+};
+
+// Cancel order
+export const cancelOrder = async (userId, orderId, refundMethod) => {
+  try {
+    // orders are now in users/{userId}/orders
+    const orderRef = doc(db, "users", userId, "orders", orderId);
     await updateDoc(orderRef, {
       status: "cancelled",
       refundMethod: refundMethod || "original", // Store refund method if provided
@@ -136,8 +186,8 @@ export const cancelOrder = async (orderId, refundMethod) => {
 // Retry order payment
 export const retryOrderPayment = async (userId, orderId) => {
   try {
-    // Get the order
-    const orderRef = doc(db, "orders", orderId);
+    // Get the order from subcollection
+    const orderRef = doc(db, "users", userId, "orders", orderId);
     const orderSnap = await getDoc(orderRef);
 
     if (!orderSnap.exists()) {
@@ -189,8 +239,7 @@ export const retryOrderPayment = async (userId, orderId) => {
     // Update user wallet
     await updateDoc(userRef, {
       "paymentMethods.wallet": newBalance,
-      "wallet.transactions": arrayUnion(transaction),
-      "wallet.balance": newBalance,
+      "walletTransactions": arrayUnion(transaction), // Note: Check if walletTransactions is field
     });
 
     return { success: true, newBalance };
