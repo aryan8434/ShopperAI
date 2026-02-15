@@ -70,7 +70,12 @@ const OrderSuccess = () => {
 
           <div className="confirmation-row total">
             <span>Total Amount:</span>
-            <span>₹{order.totalAmount.toLocaleString("en-IN")}</span>
+            <span>
+              ₹
+              {(order.totalPrice || order.totalAmount || 0).toLocaleString(
+                "en-IN",
+              )}
+            </span>
           </div>
         </div>
 

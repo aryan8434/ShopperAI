@@ -6,7 +6,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
 
 const AuthContext = createContext();
 
@@ -25,26 +25,38 @@ export const AuthProvider = ({ children }) => {
 
   // Subscribe to auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        // Fetch user data from Firestore
-        try {
-          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-          if (userDoc.exists()) {
-            setUserData(userDoc.data());
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-        }
-      } else {
-        setUserData(null);
-      }
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+
+
+  // Separate effect to listen to user data changes when user is logged in
+  useEffect(() => {
+    let unsubscribeUser = () => {};
+
+    if (user) {
+      const userRef = doc(db, "users", user.uid);
+      unsubscribeUser = onSnapshot(
+        userRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            setUserData(docSnap.data());
+          }
+        },
+        (error) => {
+          console.error("Error listening to user data:", error);
+        }
+      );
+    } else {
+      setUserData(null);
+    }
+
+    return () => unsubscribeUser();
+  }, [user]);
 
   const signup = async (email, password, displayName) => {
     try {

@@ -168,9 +168,18 @@ const Profile = () => {
     try {
       const currentBalance = profileData.paymentMethods?.wallet || 0;
       const newBalance = currentBalance + 100000;
+      
+      const transaction = {
+        id: Date.now(),
+        type: "credit",
+        amount: 100000,
+        description: "Added to wallet",
+        timestamp: new Date(),
+      };
 
       await updateDoc(doc(db, "users", user.uid), {
         "paymentMethods.wallet": newBalance,
+        "walletTransactions": [transaction, ...(profileData.walletTransactions || [])]
       });
 
       setProfileData((prev) => ({
@@ -179,6 +188,7 @@ const Profile = () => {
           ...prev.paymentMethods,
           wallet: newBalance,
         },
+        walletTransactions: [transaction, ...(prev.walletTransactions || [])]
       }));
 
       alert(
@@ -416,7 +426,7 @@ const Profile = () => {
               <h3>
                 <FaWallet /> Wallet Balance
               </h3>
-              <div className="wallet-balance">
+              <div className="wallet-balance" style={{ color: "white" }}>
                 <div className="balance-display">
                   <span className="balance-amount">
                     ₹
@@ -426,12 +436,29 @@ const Profile = () => {
                   </span>
                   <span className="balance-label">Available Balance</span>
                 </div>
-                <button
-                  className="add-money-btn"
-                  onClick={handleAddWalletMoney}
-                >
-                  Add ₹100,000
-                </button>
+                <div className="wallet-actions">
+                  <button
+                    className="add-money-btn"
+                    onClick={handleAddWalletMoney}
+                  >
+                    Add ₹100,000
+                  </button>
+                  <button
+                    className="view-history-btn"
+                    style={{
+                       backgroundColor: "rgba(255, 255, 255, 0.2)", 
+                       color: "white", 
+                       border: "1px solid rgba(255,255,255,0.5)",
+                       padding: "8px 16px",
+                       borderRadius: "8px",
+                       cursor: "pointer",
+                       fontWeight: "500"
+                    }}
+                    onClick={() => navigate("/wallet-history")}
+                  >
+                    View History
+                  </button>
+                </div>
               </div>
             </div>
 

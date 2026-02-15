@@ -43,19 +43,33 @@ const useAlert = () => {
   );
 
   const confirm = useCallback(
-    (message, title = "Confirm", onConfirm) => {
+    (messageOrConfig, title = "Confirm", onConfirm) => {
       return new Promise((resolve) => {
+        let config = {};
+        
+        if (typeof messageOrConfig === "object" && messageOrConfig !== null) {
+          config = messageOrConfig;
+        } else {
+          config = {
+            message: messageOrConfig,
+            title,
+            onConfirm,
+          };
+        }
+
         showAlert({
-          title,
-          message,
           type: "warning",
           showCancel: true,
           confirmText: "Yes",
           cancelText: "No",
+          ...config,
           onConfirm: () => {
-            onConfirm?.();
+            config.onConfirm?.();
             resolve(true);
           },
+          onClose: () => {
+             resolve(false); 
+          }
         });
       });
     },

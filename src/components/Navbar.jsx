@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   FaUser,
@@ -14,6 +14,21 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -58,7 +73,7 @@ const Navbar = () => {
                 <Link to="/cart" className="cart-btn">
                   <FaShoppingCart /> Cart
                 </Link>
-                <div className="profile-menu">
+                <div className="profile-menu" ref={menuRef}>
                   <button
                     className="profile-btn"
                     onClick={() => setShowMenu(!showMenu)}

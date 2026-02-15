@@ -2,19 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaTrash, FaPlus, FaMinus } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
-import {
-  getCart,
-  removeFromCart,
-  updateCartQuantity,
-} from "../services/CartService";
+import { useCart } from "../context/CartContext";
 import Loading from "../components/Loading";
 import "../css/Cart.css";
 
 const Cart = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [cartItems, setCartItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { cartItems, updateItemQuantity, removeItemFromCart, getCartTotal } = useCart();
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -22,26 +18,19 @@ const Cart = () => {
       navigate("/login");
       return;
     }
-
-    loadCart();
   }, [user, navigate]);
 
-  const loadCart = async () => {
-    setLoading(true);
-    const items = await getCart(user.uid);
-    setCartItems(items);
-    setLoading(false);
-  };
-
   const handleRemoveItem = async (productId) => {
-    const result = await removeFromCart(user.uid, productId);
-    if (result.success) {
-      setCartItems(cartItems.filter((item) => item.productId !== productId));
+    setLoading(true);
+    try {
+      await removeItemFromCart(productId);
       setMessage("Item removed from cart");
       setTimeout(() => setMessage(""), 2000);
-    } else {
-      setMessage(`Error: ${result.error}`);
+    } catch (error) {
+      setMessage("Failed to remove item");
       setTimeout(() => setMessage(""), 3000);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -51,28 +40,16 @@ const Cart = () => {
       return;
     }
 
-    const result = await updateCartQuantity(user.uid, productId, newQuantity);
-    if (result.success) {
-      setCartItems(
-        cartItems.map((item) =>
-          item.productId === productId
-            ? { ...item, quantity: newQuantity }
-            : item,
-        ),
-      );
-    } else {
-      setMessage(`Error: ${result.error}`);
+    setLoading(true);
+    try {
+      await updateItemQuantity(productId, newQuantity);
+    } catch (error) {
+      setMessage("Failed to update quantity");
       setTimeout(() => setMessage(""), 3000);
+    } finally {
+      setLoading(false);
     }
   };
-
-  const calculateTotal = () => {
-    return cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  };
-
-  if (loading) {
-    return <Loading message="Loading your cart..." size="large" />;
-  }
 
   if (cartItems.length === 0) {
     return (
@@ -157,7 +134,7 @@ const Cart = () => {
           <h2>Order Summary</h2>
           <div className="summary-row">
             <span>Subtotal:</span>
-            <span>₹{calculateTotal().toLocaleString("en-IN")}</span>
+            <span>₹{getCartTotal().toLocaleString("en-IN")}</span>
           </div>
           <div className="summary-row">
             <span>Shipping:</span>
@@ -166,7 +143,7 @@ const Cart = () => {
           <div className="summary-row">
             <span>Tax:</span>
             <span>
-              ₹{Math.round(calculateTotal() * 0.18).toLocaleString("en-IN")}
+              ₹{Math.round(getCartTotal() * 0.18).toLocaleString("en-IN")}
             </span>
           </div>
           <div className="summary-row total">
@@ -174,7 +151,7 @@ const Cart = () => {
             <span>
               ₹
               {(
-                calculateTotal() + Math.round(calculateTotal() * 0.18)
+                getCartTotal() + Math.round(getCartTotal() * 0.18)
               ).toLocaleString("en-IN")}
             </span>
           </div>

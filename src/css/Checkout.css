@@ -161,6 +161,41 @@
 .payment-option span {
   color: #1a1a1a;
   font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.wallet-balance {
+  color: #666;
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.wallet-history-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.3s ease;
+  margin-top: 5px;
+}
+
+.wallet-history-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.wallet-history-btn svg {
+  font-size: 0.9rem;
 }
 
 /* Card Details */
@@ -171,6 +206,107 @@
   padding: 20px;
   margin-bottom: 20px;
   border: 1px solid #eee;
+}
+
+.saved-cards,
+.saved-upis {
+  margin-bottom: 20px;
+}
+
+.saved-cards h3,
+.saved-upis h3 {
+  color: #1a1a1a;
+  margin-bottom: 15px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.card-option,
+.upi-option {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  margin-bottom: 8px;
+  background: white;
+  border: 2px solid #f0f0f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.card-option:hover,
+.upi-option:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.card-option input[type="radio"],
+.upi-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.card-option input[type="radio"]:checked + span,
+.upi-option input[type="radio"]:checked + span {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.card-option input[type="radio"]:checked ~ .card-radio-indicator,
+.upi-option input[type="radio"]:checked ~ .upi-radio-indicator {
+  background: #667eea;
+  border-color: #667eea;
+}
+
+.card-option span,
+.upi-option span {
+  color: #333;
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.card-option span small,
+.upi-option span small {
+  color: #666;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.card-radio-indicator,
+.upi-radio-indicator {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #ddd;
+  border-radius: 50%;
+  margin-right: 12px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.card-radio-indicator::after,
+.upi-radio-indicator::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card-option input[type="radio"]:checked ~ .card-radio-indicator::after,
+.upi-option input[type="radio"]:checked ~ .upi-radio-indicator::after {
+  opacity: 1;
 }
 
 .form-group {

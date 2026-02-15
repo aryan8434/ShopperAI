@@ -14,12 +14,15 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 30px;
-  gap: 20px; /* Reduced gap */
-  flex-wrap: nowrap; /* Prevent wrapping */
+  gap: 20px;
+  /* Reduced gap */
+  flex-wrap: nowrap;
+  /* Prevent wrapping */
 }
 
 .navbar-search {
-  flex: 1; /* Take up available space */
+  flex: 1;
+  /* Take up available space */
   max-width: 600px;
   margin: 0 20px;
 }
@@ -259,7 +262,8 @@
     justify-content: space-between;
   }
   .nav-links {
-    display: none; /* Hide links on mobile for now, maybe add a hamburger later if needed or keep bottom bar */
+    display: none;
+    /* Hide links on mobile for now, maybe add a hamburger later if needed or keep bottom bar */
   }
   .navbar-search {
     order: 3;
@@ -268,7 +272,7 @@
     max-width: 100%;
   }
   .navbar-container {
-     flex-wrap: wrap;
+    flex-wrap: wrap;
   }
   .logo-section {
     gap: 8px;
