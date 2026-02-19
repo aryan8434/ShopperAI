@@ -32,8 +32,9 @@ const Home = () => {
 
       <div className="hero-section">
         <div className="hero-content">
-          <h1>Welcome to Shopper</h1>
+          <h1>Welcome to Shopper AI</h1>
           <p>Find everything you need at the best prices</p>
+          <p>Now you can place order, cancel order and add items to cart by just chatting with our AI chatbot </p>
         </div>
       </div>
 

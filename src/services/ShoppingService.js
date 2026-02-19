@@ -135,35 +135,72 @@ export const getCartForLLM = async (userId) => {
 };
 
 // Place order for LLM / programmatically
+// Place order for LLM / programmatically
 export const placeOrderForLLM = async (userId, paymentMethod = "wallet") => {
-    try {
-        const cartItems = await getCartForLLM(userId);
-        if (!cartItems || cartItems.length === 0) {
-            throw new Error("Cart is empty");
-        }
-
-        const totalPrice = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-        const orderData = {
-            items: cartItems,
-            totalPrice,
-            shippingAddress: { address: "Default Address (LLM)", city: "N/A", state: "N/A", zipCode: "000000" }, 
-            paymentMethod: { type: paymentMethod },
-            paymentStatus: "completed"
-        };
-        
-        // Create order
-        const newOrder = await createOrder(userId, orderData);
-
-        // Clear cart
-        const userRef = doc(db, "users", userId);
-        await updateDoc(userRef, { cart: [] });
-
-        return newOrder;
-    } catch (error) {
-        console.error("Error placing order via LLM:", error);
-        throw error;
+  try {
+    const cartItems = await getCartForLLM(userId);
+    if (!cartItems || cartItems.length === 0) {
+      throw new Error("Cart is empty");
     }
+
+    const totalPrice = cartItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+
+    // --- Wallet Logic ---
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) throw new Error("User not found");
+
+    const userData = userSnap.data();
+    let walletBalance = userData.paymentMethods?.wallet || 0;
+
+    if (paymentMethod === "wallet") {
+      if (walletBalance < totalPrice) {
+        throw new Error(
+          `Insufficient wallet balance. Balance: ₹${walletBalance}, Required: ₹${totalPrice}`
+        );
+      }
+      walletBalance -= totalPrice;
+
+      // Deduct from wallet immediately
+      await updateDoc(userRef, {
+        "paymentMethods.wallet": walletBalance,
+        walletTransactions: arrayUnion({
+          type: "debit",
+          amount: totalPrice,
+          description: "Order Placed via AI",
+          timestamp: new Date(),
+        }),
+      });
+    }
+    // --------------------
+
+    const orderData = {
+      items: cartItems,
+      totalPrice,
+      shippingAddress: {
+        address: "Default Address (LLM)",
+        city: "N/A",
+        state: "N/A",
+        zipCode: "000000",
+      },
+      paymentMethod: { type: paymentMethod },
+      paymentStatus: "completed",
+    };
+
+    // Create order
+    const newOrder = await createOrder(userId, orderData);
+
+    // Clear cart
+    await updateDoc(userRef, { cart: [] });
+
+    return newOrder;
+  } catch (error) {
+    console.error("Error placing order via LLM:", error);
+    throw error;
+  }
 };
 
 // Cancel order
@@ -262,5 +299,121 @@ export const getUserCart = async (userId) => {
   } catch (error) {
     console.error("Error fetching cart:", error);
     return [];
+  }
+};
+
+// Add item to cart for LLM
+export const addToCartForLLM = async (userId, productName, quantity = 1) => {
+  try {
+    // 1. Find product
+    const allProducts = getAllProducts();
+    const product = allProducts.find((p) =>
+      p.name.toLowerCase().includes(productName.toLowerCase())
+    );
+
+    if (!product) {
+      throw new Error(`Product "${productName}" not found.`);
+    }
+
+    // 2. Get current cart
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    let currentCart = [];
+    if (userSnap.exists()) {
+      currentCart = userSnap.data().cart || [];
+    }
+
+    // 3. Update cart (logic from CartContext)
+    const existingItemIndex = currentCart.findIndex(
+      (item) => item.productId === product.id
+    );
+
+    if (existingItemIndex > -1) {
+      currentCart[existingItemIndex].quantity += quantity;
+    } else {
+      currentCart.push({
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        quantity: quantity,
+      });
+    }
+
+    // 4. Save to Firestore
+    await updateDoc(userRef, { cart: currentCart });
+    return { success: true, product, cart: currentCart };
+  } catch (error) {
+    console.error("Error adding to cart via LLM:", error);
+    throw error;
+  }
+};
+
+// Get recent orders for LLM context
+export const getOrdersForLLM = async (userId) => {
+  try {
+    const orders = await getUserOrders(userId);
+    // Return simplified list of last 5 orders
+    return orders.slice(0, 5).map((o) => ({
+      orderNumber: o.orderNumber || o.id,
+      date: o.createdAt?.toDate?.()?.toLocaleDateString() || "N/A",
+      total: o.totalPrice,
+      status: o.status,
+      items: o.items.map((i) => `${i.name} (x${i.quantity})`).join(", "),
+    }));
+  } catch (error) {
+    console.error("Error getting orders for LLM:", error);
+    return [];
+  }
+};
+
+// Cancel order for LLM
+export const cancelOrderForLLM = async (userId, orderNumber) => {
+  try {
+    // Need to find order ID by orderNumber (if they differ) or just iterate
+    const orders = await getUserOrders(userId);
+    const order = orders.find(
+      (o) =>
+        (o.orderNumber && o.orderNumber === orderNumber) || o.id === orderNumber
+    );
+
+    if (!order) {
+      throw new Error(`Order ${orderNumber} not found.`);
+    }
+
+    if (order.status === "cancelled") {
+      throw new Error(`Order ${orderNumber} is already cancelled.`);
+    }
+
+    if (order.status === "delivered") {
+      throw new Error(
+        `Order ${orderNumber} is already delivered and cannot be cancelled.`
+      );
+    }
+
+    // --- Refund Logic ---
+    if (order.paymentStatus === "completed") {
+      const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
+      const currentBalance = userSnap.data().paymentMethods?.wallet || 0;
+      
+      await updateDoc(userRef, {
+        "paymentMethods.wallet": currentBalance + order.totalPrice,
+        walletTransactions: arrayUnion({
+          type: "credit",
+          amount: order.totalPrice,
+          description: `Refund for Order ${order.orderNumber}`,
+          timestamp: new Date(),
+          orderId: order.id,
+        }),
+      });
+    }
+    // --------------------
+
+    await cancelOrder(userId, order.id);
+    return { success: true, orderNumber };
+  } catch (error) {
+    console.error("Error cancelling order via LLM:", error);
+    throw error;
   }
 };

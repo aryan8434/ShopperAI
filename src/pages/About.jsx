@@ -7,7 +7,7 @@ const About = () => {
     <div className="about-page">
       {/* Hero Section */}
       <div className="about-hero">
-        <h1>About Shopper</h1>
+        <h1>About Shopper AI</h1>
         <p>
           Your one-stop destination for quality products at unbeatable prices.
           We bring the market to your fingertips.

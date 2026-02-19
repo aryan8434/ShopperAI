@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { FaCheckCircle, FaBox, FaClock } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
@@ -9,13 +9,62 @@ const OrderSuccess = () => {
   const { orderId } = useParams();
   const location = useLocation();
   const { user } = useAuth();
-  const order = location.state?.order;
+  const orderFromState = location.state?.order;
+
+  const [fetchedOrder, setFetchedOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) {
       navigate("/login");
+      return;
     }
-  }, [user, navigate]);
+
+    const fetchOrder = async () => {
+      if (!orderFromState && orderId && user?.uid) {
+        try {
+          // Try user subcollection first
+          const docRef = doc(db, "users", user.uid, "orders", orderId);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+             setFetchedOrder({ id: docSnap.id, ...docSnap.data() });
+          } else {
+             // Fallback to old global collection
+             const globalRef = doc(db, "orders", orderId);
+             const globalSnap = await getDoc(globalRef);
+             if (globalSnap.exists()) {
+                setFetchedOrder({ id: globalSnap.id, ...globalSnap.data() });
+             }
+          }
+        } catch (error) {
+          console.error("Error fetching order:", error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+
+    if (!orderFromState && orderId) {
+      fetchOrder();
+    } else {
+      setLoading(false); // If order is already in state, no need to fetch
+    }
+  }, [user, navigate, orderFromState, orderId]);
+
+  const order = orderFromState || fetchedOrder;
+
+  if (loading) {
+    return (
+      <div className="order-success-container">
+        <div className="loading-message">
+          <h2>Loading order details...</h2>
+        </div>
+      </div>
+    );
+  }
 
   if (!order) {
     return (
