@@ -1,111 +1,110 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  FaUser,
-  FaSignInAlt,
-  FaUserPlus,
-  FaShoppingCart,
+  FaUser, FaSignInAlt, FaUserPlus, FaShoppingCart, FaBell,
 } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
+import { collection, query, onSnapshot, orderBy } from "firebase/firestore";
+import { db } from "../firebase";
 import Search from "./Search";
 import "../css/Navbar.css";
+
+const SEEN_KEY = "shopper_seen_statuses";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
-  const menuRef = useRef(null);
+  const [notifCount, setNotifCount] = useState(0);
+  const menuRef = React.useRef(null);
 
-  // Close dropdown when clicking outside
+  // ── Order notification badge ──────────────────────────────────
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setShowMenu(false);
-      }
-    };
+    if (!user) { setNotifCount(0); return; }
+    const q = query(collection(db, "users", user.uid, "orders"), orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(q, (snap) => {
+      const seen = JSON.parse(localStorage.getItem(SEEN_KEY) || "{}");
+      let count = 0;
+      snap.docs.forEach(doc => {
+        const d = doc.data();
+        const key = `${doc.id}_${d.status}`;
+        if (!seen[key] && d.status && d.status !== "processing") count++;
+      });
+      setNotifCount(count);
+    });
+    return unsub;
+  }, [user]);
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+  const clearNotifs = () => {
+    // Called when user visits /orders (mark all as seen)
+    if (!user) return;
+    const q = query(collection(db, "users", user.uid, "orders"));
+    // We'll just clear badge on navigate
+    setNotifCount(0);
+    const seen = JSON.parse(localStorage.getItem(SEEN_KEY) || "{}");
+    localStorage.setItem(SEEN_KEY, JSON.stringify(seen));
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
     };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleLogout = async () => {
-    try {
-      await logout();
-      setShowMenu(false);
-      navigate("/");
-    } catch (error) {
-      console.error("Error logging out:", error);
-    }
+    try { await logout(); setShowMenu(false); navigate("/"); }
+    catch (e) { console.error(e); }
   };
 
   return (
     <>
       <nav className="navbar">
         <div className="navbar-container">
-          {/* Logo */}
-          <Link to="/" className="logo-section">
+          <a href="/" className="logo-section" style={{ textDecoration: "none" }}>
             <img src="/logo.png" alt="Shopper Logo" className="logo" />
             <h1 className="brand-name">Shopper</h1>
-          </Link>
+          </a>
 
-          <div className="navbar-search">
-            <Search />
-          </div>
+          <div className="navbar-search"><Search /></div>
 
           <ul className="nav-links">
-            <li className="nav-item">
-              <Link to="/">Home</Link>
-            </li>
-            <li className="nav-item">
-              <Link to="/about">About Us</Link>
-            </li>
-            <li className="nav-item">
-              <Link to="/contact">Contact Us</Link>
-            </li>
+            <li className="nav-item"><a href="/">Home</a></li>
+            <li className="nav-item"><a href="/about">About Us</a></li>
+            <li className="nav-item"><a href="/contact">Contact Us</a></li>
           </ul>
 
-          {/* Auth Buttons */}
           <div className="auth-section">
             {user ? (
               <>
-                <Link to="/cart" className="cart-btn">
-                  <FaShoppingCart /> Cart
-                </Link>
+                <a href="/cart" className="cart-btn"><FaShoppingCart /> Cart</a>
                 <div className="profile-menu" ref={menuRef}>
-                  <button
-                    className="profile-btn"
-                    onClick={() => setShowMenu(!showMenu)}
-                  >
-                    <FaUser /> {user.displayName || "Profile"}
+                  <button className="profile-btn" onClick={() => setShowMenu(!showMenu)}>
+                    <FaUser />
+                    {user.displayName || "Profile"}
+                    {notifCount > 0 && (
+                      <span className="notif-badge">{notifCount > 9 ? "9+" : notifCount}</span>
+                    )}
                   </button>
                   {showMenu && (
                     <div className="dropdown-menu">
-                      <Link to="/profile" className="dropdown-item">
-                        My Profile
-                      </Link>
-                      <Link to="/orders" className="dropdown-item">
+                      <a href="/profile" className="dropdown-item">My Profile</a>
+                      <a href="/orders" className="dropdown-item" onClick={clearNotifs}>
                         My Orders
-                      </Link>
-                      <button
-                        className="dropdown-item logout-item"
-                        onClick={handleLogout}
-                      >
-                        Logout
-                      </button>
+                        {notifCount > 0 && <span className="dropdown-badge">{notifCount}</span>}
+                      </a>
+                      <a href="/wishlist" className="dropdown-item">❤️ Wishlist</a>
+                      <a href="/recently-viewed" className="dropdown-item">🕐 Recently Viewed</a>
+                      <button className="dropdown-item logout-item" onClick={handleLogout}>Logout</button>
                     </div>
                   )}
                 </div>
               </>
             ) : (
               <>
-                <Link to="/login" className="login-btn">
-                  <FaSignInAlt /> Login
-                </Link>
-                <Link to="/signup" className="signup-btn">
-                  <FaUserPlus /> Sign Up
-                </Link>
+                <a href="/login" className="login-btn"><FaSignInAlt /> Login</a>
+                <a href="/signup" className="signup-btn"><FaUserPlus /> Sign Up</a>
               </>
             )}
           </div>

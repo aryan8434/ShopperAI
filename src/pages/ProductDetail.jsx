@@ -1,24 +1,37 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaArrowLeft, FaPlus, FaMinus } from "react-icons/fa";
+import { FaArrowLeft, FaPlus, FaMinus, FaStar, FaRegStar, FaHeart, FaRegHeart } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
+import { useWishlist } from "../context/WishlistContext";
 import {
-  addToCart,
-  getCart,
-  updateCartQuantity,
+  addToCart, getCart, updateCartQuantity,
 } from "../services/CartService";
+import {
+  collection, addDoc, getDocs, query, orderBy,
+  doc, getDoc as fsGetDoc,
+} from "firebase/firestore";
+import { db } from "../firebase";
 import productsData from "../data/productsData";
 import Loading from "../components/Loading";
+import { toast } from "../components/Toast";
 import "../css/ProductDetail.css";
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isWishlisted, addToWishlist, removeFromWishlist } = useWishlist();
   const [product, setProduct] = useState(null);
   const [quantity, setQuantity] = useState(0);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  // Reviews state
+  const [reviews, setReviews] = useState([]);
+  const [avgRating, setAvgRating] = useState(0);
+  const [canReview, setCanReview] = useState(false);
+  const [reviewForm, setReviewForm] = useState({ rating: 5, text: "" });
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     // Find product by ID from all categories
@@ -32,9 +45,16 @@ const ProductDetail = () => {
 
     if (foundProduct) {
       setProduct(foundProduct);
-      if (user) {
-        checkProductInCart();
-      }
+      // Track recently viewed
+      const key = "shopper_recent";
+      const prev = JSON.parse(localStorage.getItem(key) || "[]");
+      const filtered = prev.filter(p => p.id !== foundProduct.id);
+      const next = [{ id: foundProduct.id, name: foundProduct.name, image: foundProduct.image, price: foundProduct.price, category: foundProduct.category }, ...filtered].slice(0, 10);
+      localStorage.setItem(key, JSON.stringify(next));
+      if (user) checkProductInCart();
+      // Load reviews
+      loadReviews(parseInt(id));
+      if (user) checkCanReview(parseInt(id));
     } else {
       navigate("/products");
     }
@@ -56,6 +76,62 @@ const ProductDetail = () => {
   const showNotification = (msg) => {
     setMessage(msg);
     setTimeout(() => setMessage(""), 3000);
+  };
+
+  const handleWishlist = async () => {
+    if (!user) { navigate("/login"); return; }
+    if (isWishlisted(product.id)) {
+      await removeFromWishlist(product.id);
+      toast.info("Removed from wishlist");
+    } else {
+      await addToWishlist(product);
+      toast.success("Saved to wishlist ❤️");
+    }
+  };
+
+  // ── Reviews ─────────────────────────────────────────────────────
+  const loadReviews = async (productId) => {
+    try {
+      const q = query(collection(db, "reviews", String(productId), "list"), orderBy("date", "desc"));
+      const snap = await getDocs(q);
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setReviews(list);
+      if (list.length > 0) {
+        const avg = list.reduce((s, r) => s + r.rating, 0) / list.length;
+        setAvgRating(Math.round(avg * 10) / 10);
+      }
+    } catch { /* silent */ }
+  };
+
+  const checkCanReview = async (productId) => {
+    try {
+      const ordersSnap = await getDocs(collection(db, "users", user.uid, "orders"));
+      const hasDelivered = ordersSnap.docs.some(d => {
+        const o = d.data();
+        return (o.status === "delivered" || o.status === "completed") &&
+          (o.items || []).some(item => item.id === productId || item.productId === productId);
+      });
+      setCanReview(hasDelivered);
+    } catch { setCanReview(false); }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewForm.text.trim()) { toast.error("Please write a review."); return; }
+    setSubmittingReview(true);
+    try {
+      const userSnap = await fsGetDoc(doc(db, "users", user.uid));
+      const displayName = user.displayName || userSnap.data()?.name || "User";
+      await addDoc(collection(db, "reviews", String(product.id), "list"), {
+        uid: user.uid, name: displayName,
+        rating: reviewForm.rating, text: reviewForm.text.trim(),
+        date: new Date(),
+      });
+      toast.success("Review submitted! Thank you.");
+      setReviewForm({ rating: 5, text: "" });
+      setCanReview(false); // one review per purchase
+      loadReviews(product.id);
+    } catch { toast.error("Failed to submit review."); }
+    finally { setSubmittingReview(false); }
   };
 
   const handleAddToCart = async () => {
@@ -148,14 +224,21 @@ const ProductDetail = () => {
     <div className="product-detail-container">
       {message && <div className="notification">{message}</div>}
 
-      <div className="back-button">
-        <button onClick={() => navigate(-1)} className="back-btn">
-          <FaArrowLeft /> Back
-        </button>
-      </div>
+      {/* Sticky back button */}
+      <button onClick={() => navigate(-1)} className="pd-back-sticky">
+        <FaArrowLeft /> Back
+      </button>
 
       <div className="product-detail-content">
         <div className="product-image-section">
+          {/* Heart wishlist overlay */}
+          <button
+            className={`pd-heart-btn ${product && isWishlisted(product.id) ? "pd-heart-active" : ""}`}
+            onClick={handleWishlist}
+            title={product && isWishlisted(product.id) ? "Remove from wishlist" : "Add to wishlist"}
+          >
+            {product && isWishlisted(product.id) ? <FaHeart /> : <FaRegHeart />}
+          </button>
           <img
             src={product.image}
             alt={product.name}
@@ -217,6 +300,73 @@ const ProductDetail = () => {
             )}
           </div>
         </div>
+      </div>
+
+      {/* ── Reviews ─────────────────────────────────────── */}
+      <div className="pd-reviews-section">
+        <div className="pd-reviews-header">
+          <h2>Customer Reviews</h2>
+          {reviews.length > 0 && (
+            <div className="pd-avg-rating">
+              <span className="pd-stars">
+                {[1,2,3,4,5].map(s => (
+                  <FaStar key={s} style={{ color: s <= Math.round(avgRating) ? "#f59e0b" : "#e0e0e0", fontSize: "1.1rem" }} />
+                ))}
+              </span>
+              <span className="pd-avg-num">{avgRating}</span>
+              <span className="pd-review-count">({reviews.length} {reviews.length === 1 ? "review" : "reviews"})</span>
+            </div>
+          )}
+        </div>
+
+        {/* Write a review */}
+        {canReview && (
+          <div className="pd-review-form">
+            <h3>Write a Review <span className="pd-verified-badge">✓ Verified Purchase</span></h3>
+            <div className="pd-star-picker">
+              {[1,2,3,4,5].map(s => (
+                <button key={s} className="pd-star-btn" onClick={() => setReviewForm(p => ({ ...p, rating: s }))}>
+                  {s <= reviewForm.rating ? <FaStar style={{ color: "#f59e0b" }} /> : <FaRegStar style={{ color: "#ccc" }} />}
+                </button>
+              ))}
+              <span className="pd-rating-label">{["Terrible","Poor","Okay","Good","Excellent"][reviewForm.rating - 1]}</span>
+            </div>
+            <textarea
+              className="pd-review-textarea"
+              placeholder="Share your experience with this product…"
+              value={reviewForm.text}
+              onChange={e => setReviewForm(p => ({ ...p, text: e.target.value }))}
+              rows={3}
+            />
+            <button className="pd-submit-review-btn" onClick={handleSubmitReview} disabled={submittingReview}>
+              {submittingReview ? "Submitting…" : "Submit Review"}
+            </button>
+          </div>
+        )}
+
+        {/* Reviews list */}
+        {reviews.length === 0 ? (
+          <div className="pd-no-reviews">No reviews yet. Be the first to review!</div>
+        ) : (
+          <div className="pd-review-list">
+            {reviews.map(r => (
+              <div key={r.id} className="pd-review-card">
+                <div className="pd-review-top">
+                  <div className="pd-reviewer-name">{r.name}</div>
+                  <div className="pd-review-stars">
+                    {[1,2,3,4,5].map(s => (
+                      <FaStar key={s} style={{ color: s <= r.rating ? "#f59e0b" : "#e0e0e0", fontSize: "0.85rem" }} />
+                    ))}
+                  </div>
+                  <div className="pd-review-date">
+                    {r.date?.toDate ? r.date.toDate().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : ""}
+                  </div>
+                </div>
+                <p className="pd-review-text">{r.text}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

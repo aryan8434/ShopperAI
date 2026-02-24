@@ -1,0 +1,189 @@
+/* ─── Shared Wishlist / Recently Viewed page styles ─── */
+.wl-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+/* Header */
+.wl-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+.wl-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.wl-back:hover { border-color: #667eea; color: #667eea; }
+
+.wl-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.wl-heart-icon { color: #ef4444; font-size: 1.3rem; }
+
+.wl-count {
+  font-size: 0.85rem;
+  color: #aaa;
+  background: #eee;
+  border-radius: 20px;
+  padding: 3px 12px;
+}
+
+.wl-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.wl-clear-btn:hover { background: #fee2e2; }
+
+/* Empty state */
+.wl-empty {
+  text-align: center;
+  padding: 80px 20px;
+}
+.wl-empty-icon {
+  font-size: 4rem;
+  color: #ef4444;
+  opacity: 0.3;
+  margin-bottom: 20px;
+}
+.wl-empty h2 { font-size: 1.4rem; color: #1a1a1a; margin: 0 0 8px; }
+.wl-empty p  { font-size: 0.95rem; color: #aaa; margin: 0 0 24px; }
+.wl-browse-btn {
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.wl-browse-btn:hover { opacity: 0.88; transform: translateY(-2px); }
+
+/* Grid */
+.wl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 18px;
+}
+
+.wl-card {
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  border: 1px solid #eee;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.wl-card:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(0,0,0,0.1); }
+
+.wl-img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  display: block;
+}
+
+/* Remove button (wishlist only) */
+.wl-remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255,255,255,0.92);
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ef4444;
+  font-size: 0.75rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: transform 0.15s, background 0.15s;
+}
+.wl-remove-btn:hover { transform: scale(1.15); background: #fff; }
+
+.wl-card-info { padding: 12px 14px 14px; }
+
+.wl-item-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+
+.wl-item-cat {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #bbb;
+  margin-bottom: 6px;
+}
+
+.wl-item-price {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #667eea;
+  margin-bottom: 10px;
+}
+
+.wl-add-cart {
+  width: 100%;
+  padding: 8px 0;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.wl-add-cart:hover { opacity: 0.88; }
+
+@media (max-width: 480px) {
+  .wl-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .wl-img  { height: 130px; }
+  .wl-title { font-size: 1.2rem; }
+}

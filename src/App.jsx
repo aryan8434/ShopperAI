@@ -6,6 +6,8 @@ import {
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
+import { WishlistProvider } from "./context/WishlistContext";
+import ToastContainer from "./components/Toast";
 import "./App.css";
 import Navbar from "./components/Navbar";
 import AIChat from "./components/AIChat";
@@ -18,6 +20,7 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
 import OrderSuccess from "./pages/OrderSuccess";
+import OrderDetail from "./pages/OrderDetail";
 import OrderCancel from "./pages/OrderCancel";
 import WalletHistory from "./pages/WalletHistory";
 import Electronics from "./pages/Electronics";
@@ -30,6 +33,8 @@ import Toys from "./pages/Toys";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import ProductDetail from "./pages/ProductDetail";
+import Wishlist from "./pages/Wishlist";
+import RecentlyViewed from "./pages/RecentlyViewed";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -51,9 +56,11 @@ function App() {
     <Router>
       <AuthProvider>
         <CartProvider>
+          <WishlistProvider>
           <div className="app">
             <Navbar />
             <main className="app-content">
+              <ToastContainer />
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
@@ -91,6 +98,14 @@ function App() {
                   }
                 />
                 <Route
+                  path="/orders/:orderId"
+                  element={
+                    <ProtectedRoute>
+                      <OrderDetail />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/order-success/:orderId"
                   element={
                     <ProtectedRoute>
@@ -124,10 +139,27 @@ function App() {
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/product/:id" element={<ProductDetail />} />
+                <Route
+                  path="/wishlist"
+                  element={
+                    <ProtectedRoute>
+                      <Wishlist />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/recently-viewed"
+                  element={
+                    <ProtectedRoute>
+                      <RecentlyViewed />
+                    </ProtectedRoute>
+                  }
+                />
               </Routes>
             </main>
             <AIChat />
           </div>
+          </WishlistProvider>
         </CartProvider>
       </AuthProvider>
     </Router>

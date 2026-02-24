@@ -39,15 +39,12 @@ const Cart = () => {
       handleRemoveItem(productId);
       return;
     }
-
-    setLoading(true);
+    // optimistic – update UI immediately
     try {
       await updateItemQuantity(productId, newQuantity);
     } catch (error) {
       setMessage("Failed to update quantity");
       setTimeout(() => setMessage(""), 3000);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -140,20 +137,9 @@ const Cart = () => {
             <span>Shipping:</span>
             <span className="free">FREE</span>
           </div>
-          <div className="summary-row">
-            <span>Tax:</span>
-            <span>
-              ₹{Math.round(getCartTotal() * 0.18).toLocaleString("en-IN")}
-            </span>
-          </div>
           <div className="summary-row total">
             <span>Total:</span>
-            <span>
-              ₹
-              {(
-                getCartTotal() + Math.round(getCartTotal() * 0.18)
-              ).toLocaleString("en-IN")}
-            </span>
+            <span>₹{getCartTotal().toLocaleString("en-IN")}</span>
           </div>
 
           <button
